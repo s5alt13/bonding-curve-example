@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 contract BondingCurve {
     using Math for uint256;
     using SafeCast for uint256;
+    // NOTE: 테스트용 이벤트
+    event LogMaxSupply(uint256 maxSupply, uint256 requestedSupply);
 
     // Constants for bonding curve calculation
     uint256 public constant INITIAL_PRICE = 1e14; // 0.0001 ETH in wei
@@ -78,6 +80,9 @@ contract BondingCurve {
     /// @param supply The current token supply
     /// @return price The calculated price in wei
     function _calculatePrice(uint256 supply) internal pure returns (uint256 price) {
+        if (supply == 0) {
+            return INITIAL_PRICE; // 공급량이 0일 때 기본 가격 반환
+        }
         uint256 logTerm = WEIGHT_LOG_MULTIPLIER * _approxLog(1 + supply / WEIGHT_LOG_DENOMINATOR);
         uint256 exponentTerm = _cbrt(supply); // Use custom cubic root approximation
         price = INITIAL_PRICE + (SLOPE * logTerm * exponentTerm) / 1e18;
@@ -100,5 +105,21 @@ contract BondingCurve {
         // Scale x to avoid underflow/overflow
         uint256 scaledX = x * 1e10; // Scale up to reduce error
         result = scaledX / 2; // Placeholder for actual approximation
+    }
+
+    /// @notice 테스트를 위한 cubic root 헬퍼 함수
+    function testCbrt(uint256 x) external pure returns (uint256) {
+        return _cbrt(x);
+    }
+
+    /// @notice 테스트를 위한 logarithm 헬퍼 함수
+    function testApproxLog(uint256 x) external pure returns (uint256) {
+        return _approxLog(x);
+    }
+    // TODO: 테스트를 위해 발행량을 임의로 조절하기 위해 추가한 함수.
+    function setCurrentSupply(uint256 _supply) public {
+        require(_supply <= MAX_SUPPLY, "Exceeds max supply");
+        emit LogMaxSupply(MAX_SUPPLY, _supply); // 디버깅용 로그 추가
+        currentSupply = _supply;
     }
 }
