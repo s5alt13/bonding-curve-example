@@ -46,7 +46,7 @@ contract Treasury is Ownable {
     constructor(address _reserve, address _gastToken, address _exchange, uint256 _reserveRatio) Ownable(msg.sender) {
         require(_reserve != address(0), "Invalid Reserve address");
         require(_gastToken != address(0), "Invalid GASToken address");
-        require(_exchange != address(0), "Invalid Exchange address");
+        // require(_exchange != address(0), "Invalid Exchange address");
         require(_reserveRatio <= 100, "Reserve ratio must be <= 100");
 
         reserve = Reserve(payable(_reserve));
@@ -117,6 +117,11 @@ contract Treasury is Ownable {
     function updateReserveRatio(uint256 newRatio) external onlyOwner {
         require(newRatio <= 100, "Reserve ratio must be <= 100");
         reserveRatio = newRatio;
+    }
+    // NOTE: 배포 시 순서 때문에 추가함. 트레저리는 자금을 가지고 있어 변경하기 어렵지만, Exchange는 가능하기 때문에 업데이트 하는 것으로
+    function updateExchange(address _exchange) external onlyOwner {
+        require(_exchange != address(0), "Invalid Exchange address");
+        exchange = TokenExchange(payable(_exchange));
     }
 
     // receive() 함수가 필요할까? 
