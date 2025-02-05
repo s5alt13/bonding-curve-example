@@ -6,6 +6,8 @@ import "./Treasury.sol";
 import "./Reserve.sol";
 import "./TokenExchange.sol";
 
+// TODO: RTR에 따라 높거나 낮거나 buy만 하는 것으로 조정 필요. 
+
 contract Rebalancer is Ownable {
     Treasury public treasury; // Treasury contract reference
     Reserve public reserve; // Reserve contract refere`nce
@@ -56,49 +58,49 @@ contract Rebalancer is Ownable {
     /**
      * @notice Trigger the rebalancing process to align RTR with the target
      */
-    function triggerRebalance() external onlyOwner {
-        uint256 reserveBalance = reserve.getBalance();
-        uint256 treasuryBalance = treasury.getBalance();
+    // function triggerRebalance() external onlyOwner {
+    //     uint256 reserveBalance = reserve.getBalance();
+    //     uint256 treasuryBalance = treasury.getBalance();
 
-        require(treasuryBalance > 0, "Treasury balance is zero");
+    //     require(treasuryBalance > 0, "Treasury balance is zero");
 
-        uint256 currentRTR = (reserveBalance * 100) / treasuryBalance;
+    //     uint256 currentRTR = (reserveBalance * 100) / treasuryBalance;
 
-        // Check if rebalancing is needed
-        if (checkRTR()) {
-            emit RebalanceTriggered(reserveBalance, treasuryBalance, targetRTR, true);
-            return; // RTR is already within bounds
-        }
+    //     // Check if rebalancing is needed
+    //     if (checkRTR()) {
+    //         emit RebalanceTriggered(reserveBalance, treasuryBalance, targetRTR, true);
+    //         return; // RTR is already within bounds
+    //     }
 
-        emit RebalanceTriggered(reserveBalance, treasuryBalance, targetRTR, false);
+    //     emit RebalanceTriggered(reserveBalance, treasuryBalance, targetRTR, false);
 
-        // Perform rebalancing: adjust ETH in Treasury to align RTR with target
-        if (currentRTR < targetRTR) {
-            // Treasury needs to purchase GAST using its ETH
-            uint256 ethToUse = (targetRTR * treasuryBalance - reserveBalance * 100) / targetRTR;
-            require(ethToUse <= treasuryBalance, "Not enough ETH in Treasury");
+    //     // Perform rebalancing: adjust ETH in Treasury to align RTR with target
+    //     if (currentRTR < targetRTR) {
+    //         // Treasury needs to purchase GAST using its ETH
+    //         uint256 ethToUse = (targetRTR * treasuryBalance - reserveBalance * 100) / targetRTR;
+    //         require(ethToUse <= treasuryBalance, "Not enough ETH in Treasury");
 
-            // Call Exchange to buy GAST
-            uint256 gastPurchased = exchange.buy{value: ethToUse}();
+    //         // Call Exchange to buy GAST
+    //         uint256 gastPurchased = exchange.buy{value: ethToUse}();
 
-            // Update Treasury's ETH balance
-            treasury.rebalance();
+    //         // Update Treasury's ETH balance
+    //         treasury.rebalance();
 
-            emit RebalancePerformed(ethToUse, gastPurchased);
-        } else {
-            // RTR is too high; sell GAST to align ratio
-            uint256 excessReserve = (reserveBalance * 100 - targetRTR * treasuryBalance) / targetRTR;
+    //         emit RebalancePerformed(ethToUse, gastPurchased);
+    //     } else {
+    //         // RTR is too high; sell GAST to align ratio
+    //         uint256 excessReserve = (reserveBalance * 100 - targetRTR * treasuryBalance) / targetRTR;
 
-            // Sell GAST for ETH
-            uint256 gastToSell = excessReserve / curve.getSellPrice(1 ether); // Convert excessReserve to GAST amount
-            uint256 ethReceived = exchange.sell(gastToSell);
+    //         // Sell GAST for ETH
+    //         uint256 gastToSell = excessReserve / curve.getSellPrice(1 ether); // Convert excessReserve to GAST amount
+    //         uint256 ethReceived = exchange.sell(gastToSell);
 
-            // Update Reserve's ETH balance
-            reserve.withdraw(address(treasury), ethReceived);
+    //         // Update Reserve's ETH balance
+    //         reserve.withdraw(address(treasury), ethReceived);
 
-            emit RebalancePerformed(ethReceived, gastToSell);
-        }
-    }
+    //         emit RebalancePerformed(ethReceived, gastToSell);
+    //     }
+    // }
 
     /**
      * @notice Update the target RTR

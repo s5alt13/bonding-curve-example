@@ -17,27 +17,15 @@ contract Treasury is Ownable {
 
     address public rebalancer; // Address of the Rebalancing contract
 
-    /**
-     * @notice Sets the Rebalancing contract address
-     * @param _rebalancer The address of the Rebalancing contract
-     */
     function setRebalancer(address _rebalancer) external onlyOwner {
         require(_rebalancer != address(0), "Invalid rebalancer address");
         rebalancer = _rebalancer;
     }
 
-    /**
-     * @notice Modifier to restrict access to the rebalancer contract
-     */
     modifier onlyRebalancer() {
         require(msg.sender == rebalancer, "Caller is not the Rebalancer");
         _;
     }
-
-    /**
-     * @notice Rebalances ETH by purchasing GAST until reserve ratio is satisfied
-     */
-
 
     event Deposit(address indexed depositor, uint256 ethAmount, uint256 newTreasuryBalance);
     event Withdraw(address indexed recipient, uint256 ethAmount);
@@ -64,12 +52,6 @@ contract Treasury is Ownable {
         emit Deposit(msg.sender, msg.value, treasuryETHBalance); // Emit deposit event
     }   
 
-    /**
-     * @notice Withdraws ETH from the Treasury
-     * @param to The address to send ETH to
-     * @param amount The amount of ETH to withdraw
-     */
-
     // TODO: 수정자 업데이트
     function withdraw(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "Invalid recipient address");
@@ -82,10 +64,6 @@ contract Treasury is Ownable {
         emit Withdraw(to, amount);
     }
 
-    /**
-     * @notice Rebalances ETH by purchasing GAST until reserve ratio is satisfied
-     */
-    
     function rebalance() external onlyRebalancer {
         require(address(exchange) != address(0), "Exchange not set");
 
@@ -101,18 +79,10 @@ contract Treasury is Ownable {
         emit Rebalance(treasuryETHBalance);
     }
 
-    /**
-     * @notice Get the current Treasury ETH balance
-     * @return balance The current ETH balance in Treasury
-     */
     function getBalance() external view returns (uint256 balance) {
         return treasuryETHBalance; // Return balance
     }
 
-    /**
-     * @notice Updates the reserve ratio
-     * @param newRatio The new reserve ratio (percentage, e.g., 10 means 10%)
-     */
     // TODO: 수정자 업데이트
     function updateReserveRatio(uint256 newRatio) external onlyOwner {
         require(newRatio <= 100, "Reserve ratio must be <= 100");

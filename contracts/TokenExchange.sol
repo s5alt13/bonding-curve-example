@@ -29,16 +29,12 @@ contract TokenExchange {
         treasury = Treasury(_treasury);
     }
 
-    /**
-     * @notice Buy GAST with ETH
-     * @dev Large transactions are split into smaller chunks for processing.
-     * @dev ETH is split between Reserve and Treasury based on the spread.
-     */
     function buy() external payable returns (uint256 gastAmount) {
         require(msg.value > 0, "TokenExchange: ETH amount must be greater than 0");
 
         // Calculate the amount of GAST tokens to mint based on the ETH sent
-        gastAmount = bondingCurve.getBuyPrice(msg.value);
+        uint256 buyPrice = bondingCurve.getBuyPrice(); 
+        gastAmount = msg.value / buyPrice;
         
         // Mint GAST tokens for the buyer
         gasToken.mint(msg.sender, gastAmount);
@@ -58,15 +54,12 @@ contract TokenExchange {
         return gastAmount; // Return the amount of GAST tokens minted
     }
 
-    /**
-     * @notice Sell GAST and receive ETH
-     * @param gastAmount The amount of GAST tokens to sell
-     */
     function sell(uint256 gastAmount) external returns (uint256 ethAmount) {
         require(gastAmount > 0, "BondingCurveExchange: GAST amount must be greater than 0");
 
         // Calculate the ETH amount to return based on the GAST amount
-        ethAmount = bondingCurve.getSellPrice(gastAmount);
+        uint256 sellPrice = bondingCurve.getSellPrice();
+        ethAmount = gastAmount * sellPrice;
 
         // Burn GAST tokens from the seller
         gasToken.burnFrom(msg.sender, gastAmount);
@@ -79,28 +72,25 @@ contract TokenExchange {
         return ethAmount; // Return the ETH amount sent to the seller
     }
 
-    /**
-     * @notice Estimate the amount of GAST tokens for a given ETH amount
-     * @param ethAmount The amount of ETH to use for the estimate
-     * @return gastAmount The estimated amount of GAST tokens
-     */
     function estimateBuy(uint256 ethAmount) external view returns (uint256 gastAmount) {
-        gastAmount = bondingCurve.getBuyPrice(ethAmount);
+        uint256 buyPrice = bondingCurve.getBuyPrice();
+        gastAmount = ethAmount * buyPrice;
+        return gastAmount;
     }
 
-    /**
-     * @notice Estimate the amount of ETH for a given GAST amount
-     * @param gastAmount The amount of GAST tokens to sell
-     * @return ethAmount The estimated amount of ETH
-     */
     function estimateSell(uint256 gastAmount) external view returns (uint256 ethAmount) {
-        ethAmount = bondingCurve.getSellPrice(gastAmount);
+        uint256 sellPrice = bondingCurve.getSellPrice();
+        ethAmount = gastAmount * sellPrice;
+        return ethAmount;
     }
 
-    /**
-     * @notice Receive function to accept ETH transfers directly to the contract
-     */
     receive() external payable {
         revert("BondingCurveExchange: Direct ETH transfers not allowed. Use buy() instead.");
+    }
+
+    // NOTE: 배포 테스트용으로 추가. 추후 삭제
+    function updateTreasury(address _treasury) public {
+        require(_treasury != address(0), "TokenExchange: invalid treasury address");
+        treasury = Treasury(_treasury);
     }
 }

@@ -1,50 +1,56 @@
-// BondingCurve.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
-import "./BondingCurveTable.sol";
+import "./BondingCurveData.sol";
+import "./GASToken.sol";
+
 
 contract BondingCurve {
-    BondingCurveTable public priceTableContract;
-    mapping(address => uint256) public balances;
-    uint256 public totalSupply;
-
-    event TokenPurchased(address indexed buyer, uint256 amount, uint256 price);
-    event TokenSold(address indexed seller, uint256 amount, uint256 price);
-
-    constructor(address _priceTableAddress) {
-        priceTableContract = BondingCurveTable(_priceTableAddress);
+    GASToken public gasToken; // GASToken 참조 (ERC-20)
+    
+    constructor(address _gasToken) {
+        require(_gasToken != address(0), "Invalid GASToken address");
+        gasToken = GASToken(_gasToken);
     }
 
-    function buyToken(uint256 amount) external payable {
-        uint256 totalCost = 0;
 
-        for (uint256 i = 0; i < amount; i++) {
-            totalCost += priceTableContract.getPrice(totalSupply + i + 1);
-        }
+    function getBuyPrice() external view returns (uint256 buyPrice) { 
+        uint256 currentSupply = gasToken.totalSupply(); // ✅ GASToken에서 현재 공급량 조회
+        (buyPrice, , ) = interpolatePrice(currentSupply);
 
-        require(msg.value >= totalCost, "Insufficient ETH sent");
-
-        balances[msg.sender] += amount;
-        totalSupply += amount;
-
-        emit TokenPurchased(msg.sender, amount, totalCost);
+        return buyPrice;
     }
 
-    function sellToken(uint256 amount) external {
-        require(balances[msg.sender] >= amount, "Not enough tokens");
 
-        uint256 refundAmount = 0;
+    function getSellPrice() external view returns (uint256 sellPrice) { 
+        uint256 currentSupply = gasToken.totalSupply(); // ✅ GASToken에서 현재 공급량 조회
+        (, sellPrice, ) = interpolatePrice(currentSupply); 
 
-        for (uint256 i = 0; i < amount; i++) {
-            refundAmount += priceTableContract.getPrice(totalSupply - i);
+        return sellPrice;
+    }
+
+    function getSpread() external view returns (uint256 spread) { 
+        uint256 currentSupply = gasToken.totalSupply(); // ✅ GASToken에서 현재 공급량 조회
+        (,,spread) = interpolatePrice(currentSupply);
+
+        return spread;
+    }
+
+    function interpolatePrice(uint256 supply) internal pure returns (uint256 buyPrice, uint256 sellPrice, uint256 spread) {
+        uint256 lowerIndex = (supply / 100_000) * 100_000; // 발행량 기준으로 가장 가까운 작은 값
+        uint256 upperIndex = lowerIndex + 100_000; // 발행량 기준으로 가장 가까운 큰 값
+
+        if (supply % 100_000 == 0) {
+            BondingCurveData.PriceData memory data = BondingCurveData.getData(lowerIndex);
+            return (data.buyPrice, data.sellPrice, data.spread);
+        } else {
+            BondingCurveData.PriceData memory lowerData = BondingCurveData.getData(lowerIndex);
+            BondingCurveData.PriceData memory upperData = BondingCurveData.getData(upperIndex);
+
+            uint256 ratio = (supply - lowerIndex) * 1e18 / (upperIndex - lowerIndex); // 비율 계산 (소수점 보정)
+            buyPrice = lowerData.buyPrice + ((upperData.buyPrice - lowerData.buyPrice) * ratio / 1e18);
+            sellPrice = lowerData.sellPrice + ((upperData.sellPrice - lowerData.sellPrice) * ratio / 1e18);
+            spread = lowerData.spread + ((upperData.spread - lowerData.spread) * ratio / 1e18);
         }
-
-        balances[msg.sender] -= amount;
-        totalSupply -= amount;
-
-        payable(msg.sender).transfer(refundAmount);
-
-        emit TokenSold(msg.sender, amount, refundAmount);
     }
 }
