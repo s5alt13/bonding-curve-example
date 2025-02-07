@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 library BondingCurveData {
+    uint256 public constant TABLE_SIZE = 243; 
+
     struct PriceData {
         uint256 cumulativeSupply;
         uint256 buyPrice;

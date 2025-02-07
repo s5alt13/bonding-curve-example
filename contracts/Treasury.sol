@@ -1,59 +1,61 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Reserve.sol";
 import "./GASToken.sol";
 import "./TokenExchange.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 contract Treasury is Ownable {
-    Reserve public reserve; // Reserve contract reference
-    GASToken public gastToken; // GASToken contract reference
-    TokenExchange public exchange; // Exchange contract reference
+    Reserve public reserve;
+    GASToken public gasToken;
+    TokenExchange public exchange;
 
-    uint256 public reserveRatio; // Percentage of ETH to Reserve (e.g., 10 means 10%)
-    uint256 public treasuryETHBalance; // ETH balance managed by Treasury
-    uint256 public reserveETHBalance; // ETH balance managed by Reserve
+    uint256 public reserveRatio;
+    uint256 public treasuryETHBalance;
+    uint256 public reserveETHBalance;
 
-    address public rebalancer; // Address of the Rebalancing contract
+    address public rebalancer;
 
-    function setRebalancer(address _rebalancer) external onlyOwner {
+    // modifier onlyRebalancer() {
+    //     require(msg.sender == rebalancer, "Caller is not the Rebalancer");
+    //     _;
+    // }
+
+    function setRebalancer(address _rebalancer) external {
         require(_rebalancer != address(0), "Invalid rebalancer address");
         rebalancer = _rebalancer;
-    }
-
-    modifier onlyRebalancer() {
-        require(msg.sender == rebalancer, "Caller is not the Rebalancer");
-        _;
     }
 
     event Deposit(address indexed depositor, uint256 ethAmount, uint256 newTreasuryBalance);
     event Withdraw(address indexed recipient, uint256 ethAmount);
     event Rebalance(uint256 remainingETH);
 
-    constructor(address _reserve, address _gastToken, address _exchange, uint256 _reserveRatio) Ownable(msg.sender) {
+    constructor(address _reserve, address _gasToken, address _exchange) Ownable(msg.sender) {
         require(_reserve != address(0), "Invalid Reserve address");
-        require(_gastToken != address(0), "Invalid GASToken address");
+        require(_gasToken != address(0), "Invalid GASToken address");
         // require(_exchange != address(0), "Invalid Exchange address");
-        require(_reserveRatio <= 100, "Reserve ratio must be <= 100");
+        // require(_reserveRatio <= 100, "Reserve ratio must be <= 100");
 
         reserve = Reserve(payable(_reserve));
-        gastToken = GASToken(_gastToken);
+        gasToken = GASToken(_gasToken);
         exchange = TokenExchange(payable(_exchange));
-        reserveRatio = _reserveRatio;   
+        // reserveRatio = _reserveRatio;   
     }
-
-
+    
     function deposit() external payable {
+        console.log("Contract: Treasury | Function: deposit() | Sender:", msg.sender, "| Value:", msg.value);
         require(msg.value > 0, "Treasury: ETH amount must be greater than zero");
-
         treasuryETHBalance += msg.value; // Update Treasury ETH balance
 
         emit Deposit(msg.sender, msg.value, treasuryETHBalance); // Emit deposit event
-    }   
+    }  
 
-    // TODO: 수정자 업데이트
-    function withdraw(address to, uint256 amount) external onlyOwner {
+    // NOTE: 
+    function withdraw(address to, uint256 amount) external {
+        console.log("Contract: Treasury | Function: withdraw() | Sender:", msg.sender);
+
         require(to != address(0), "Invalid recipient address");
         require(amount <= treasuryETHBalance, "Insufficient Treasury balance");
 
@@ -63,8 +65,10 @@ contract Treasury is Ownable {
 
         emit Withdraw(to, amount);
     }
+    // NOTE: onlyRebalancer
+    function rebalance() external {
+        console.log("Contract: Treasury | Function: rebalance() | Sender:", msg.sender);
 
-    function rebalance() external onlyRebalancer {
         require(address(exchange) != address(0), "Exchange not set");
 
         uint256 excessETH = treasuryETHBalance;
@@ -79,20 +83,26 @@ contract Treasury is Ownable {
         emit Rebalance(treasuryETHBalance);
     }
 
+    // function rebalance() external onlyRebalancer {}
+
     function getBalance() external view returns (uint256 balance) {
+        console.log("Contract: Treasury | Function: getBalance() | Sender:", msg.sender);
+
         return treasuryETHBalance; // Return balance
     }
 
-    // TODO: 수정자 업데이트
-    function updateReserveRatio(uint256 newRatio) external onlyOwner {
-        require(newRatio <= 100, "Reserve ratio must be <= 100");
-        reserveRatio = newRatio;
-    }
-    // NOTE: 배포 시 순서 때문에 추가함. 트레저리는 자금을 가지고 있어 변경하기 어렵지만, Exchange는 가능하기 때문에 업데이트 하는 것으로
-    function updateExchange(address _exchange) external onlyOwner {
+    // function updateReserveRatio(uint256 newRatio) external onlyOwner {
+    //     require(newRatio <= 100, "Reserve ratio must be <= 100");
+    //     reserveRatio = newRatio;
+    // }
+
+    // NOTE: 테스트용
+    function updateExchange(address _exchange) external {
+        console.log("Contract: Treasury | Function: updateExchange() | Sender:", msg.sender);
+
         require(_exchange != address(0), "Invalid Exchange address");
         exchange = TokenExchange(payable(_exchange));
     }
 
-    // receive() 함수가 필요할까? 
+    // function receive() {}
 }
