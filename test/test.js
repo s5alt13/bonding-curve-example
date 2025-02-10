@@ -3,9 +3,10 @@ const { ethers } = require("hardhat");
 
 describe("Bonding Curve Test", function () {
     let gasToken, bondingCurve, exchange, treasury, reserve;
-    let initialETH = ethers.parseEther("1000");
+    let initialETH = ethers.parseEther("1300");
 
     beforeEach(async function () {
+
         // 배포 순서 
         // 1. Reserve 
         // 2. GASToken
@@ -19,9 +20,18 @@ describe("Bonding Curve Test", function () {
         owner = signers[0];
         buyer = signers[1]; // ✅ buyer를 명확하게 할당
         console.log("🔍 Assigned Buyer Address:", buyer?.address);
+        const balance = await ethers.provider.getBalance(buyer.address);
+        console.log("🔍 Buyer Initial ETH Balance:", ethers.formatEther(balance), "ETH");
         // console.log("🔍 Buyer Address:", buyer.address); // ✅ buyer 주소 출력
         // const ownerBalance = await ethers.provider.getBalance(owner.address);
+
         // console.log(`🔍 Owner ETH Balance before sending: ${ethers.formatEther(ownerBalance)} ETH`);
+
+            // 🔹 buyer의 ETH 잔액을 강제로 100만 ETH로 설정
+        // await ethers.provider.send("hardhat_setBalance", [
+        //     buyer.address,
+        //     "0x3635C9ADC5DEA00000", // 1000000 ETH (16진수 표현)
+        // ]);
 
 
         const ReserveMock = await ethers.getContractFactory("Reserve");
@@ -83,14 +93,12 @@ describe("Bonding Curve Test", function () {
     });
 
     it("Should correctly interpolate price after multiple buys", async function () {
-        // await owner.sendTransaction({
-        //     to: buyer.address,
-        //     value: ethers.parseEther("9000") 
-        // });
+
         const balance = await ethers.provider.getBalance(buyer.address);
         console.log("🔍 Buyer ETH Balance:", ethers.formatEther(balance), "ETH");
-        for (let i = 1; i <= 9; i++) {
-            console.log(`🔹 Iteration ${i}: Buying 1000 ETH worth of GAST`);
+
+        for (let i = 1; i <= 500; i++) {
+            console.log(`🔹 Iteration ${i}: Buying 1300 ETH worth of GAST`);
 
             await exchange.connect(buyer).buy({ value: initialETH });
 
