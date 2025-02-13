@@ -169,6 +169,79 @@ contract BondingCurve {
         return (buyPrice, sellPrice, spread);
     }
 
+    // function interpolateSellPrice(uint256 supply) internal returns (uint256 sellPrice) {
+    //     console.log("Contract: BondingCurve | Function: interpolateSellPrice()");
+    //     console.log("Entry Function supply", supply);
+
+    //     uint256 lowerSupply;
+    //     uint256 upperSupply;
+    //     BondingCurveData.PriceData memory lowerData;
+    //     BondingCurveData.PriceData memory upperData;
+
+    //     uint256 lastIndex = BondingCurveData.TABLE_SIZE - 1;
+
+    //     // ✅ 공급량이 마지막 행보다 크면 마지막 데이터를 반환
+    //     if (supply >= BondingCurveData.getData(lastIndex).cumulativeSupply) {
+    //         BondingCurveData.PriceData memory lastData = BondingCurveData.getData(lastIndex);
+    //         console.log("[INFO] Supply is greater than or equal to the last row's cumulativeSupply");
+    //         console.log("Supply:", supply);
+    //         console.log("Last Row Cumulative Supply:", BondingCurveData.getData(lastIndex).cumulativeSupply);
+    //         console.log("Returning Last Row Sell Price:", lastData.sellPrice);
+    //         return lastData.sellPrice;
+    //     }
+
+    //     // ✅ 공급량이 첫 번째 행보다 작으면 첫 번째 데이터를 반환
+    //     if (supply <= BondingCurveData.getData(0).cumulativeSupply) {
+    //         BondingCurveData.PriceData memory firstData = BondingCurveData.getData(0);
+    //         console.log("[INFO] Supply is less than or equal to the first row's cumulativeSupply");
+    //         console.log("Supply:", supply);
+    //         console.log("First Row Cumulative Supply:", BondingCurveData.getData(0).cumulativeSupply);
+    //         console.log("Returning First Row Sell Price:", firstData.sellPrice);
+    //         return firstData.sellPrice;
+    //     }
+
+    //     // 🔹 lowerIndex, upperIndex 탐색 (Sell 기준)
+    //     while (lowerIndex > 0 && supply < BondingCurveData.getData(lowerIndex).cumulativeSupply) {
+    //         lowerIndex--;
+    //         upperIndex--;
+    //     }
+    //     while (upperIndex < lastIndex && supply > BondingCurveData.getData(upperIndex).cumulativeSupply) {
+    //         lowerIndex++;
+    //         upperIndex++;
+    //     }
+
+    //     // ✅ lowerData, upperData 갱신
+    //     lowerData = BondingCurveData.getData(lowerIndex - 1);
+    //     upperData = BondingCurveData.getData(upperIndex - 1);
+    //     console.log("[DEBUG] Selected lowerIndex:", lowerIndex - 1);
+    //     console.log("[DEBUG] Selected upperIndex:", upperIndex - 1);
+    //     lowerSupply = lowerData.cumulativeSupply;
+    //     upperSupply = upperData.cumulativeSupply;
+
+    //     // ✅ lowerSupply와 정확히 일치하면 바로 반환
+    //     if (supply == lowerSupply) {
+    //         return lowerData.sellPrice;
+    //     }
+
+    //     // ✅ 예외 처리: upperSupply가 lowerSupply보다 커야 함
+    //     require(upperSupply > lowerSupply, "Invalid supply range");
+
+    //     // 🔹 보간 계산
+    //     uint256 ratio = (supply - lowerSupply) * 1e18 / (upperSupply - lowerSupply);
+    //     uint256 adjustedRatio = ratio / 1e12;
+
+    //     // sellPrice = lowerData.sellPrice + ((upperData.sellPrice - lowerData.sellPrice) * adjustedRatio / 1e18);
+    //     sellPrice = upperData.sellPrice - ((upperData.sellPrice - lowerData.sellPrice) * adjustedRatio / 1e18);
+
+    //     console.log("SellPrice Calculation:");
+    //     console.log("Lower Sell Price:", lowerData.sellPrice);
+    //     console.log("Upper Sell Price:", upperData.sellPrice);
+    //     console.log("Ratio:", adjustedRatio);
+    //     console.log("Computed Sell Price:", sellPrice);
+    //     // console.log("Computed Spread:", spread);
+
+    //     return sellPrice;
+    // }
     function interpolateSellPrice(uint256 supply) internal returns (uint256 sellPrice) {
         console.log("Contract: BondingCurve | Function: interpolateSellPrice()");
         console.log("Entry Function supply", supply);
@@ -185,7 +258,7 @@ contract BondingCurve {
             BondingCurveData.PriceData memory lastData = BondingCurveData.getData(lastIndex);
             console.log("[INFO] Supply is greater than or equal to the last row's cumulativeSupply");
             console.log("Supply:", supply);
-            console.log("Last Row Cumulative Supply:", BondingCurveData.getData(lastIndex).cumulativeSupply);
+            console.log("Last Row Cumulative Supply:", lastData.cumulativeSupply);
             console.log("Returning Last Row Sell Price:", lastData.sellPrice);
             return lastData.sellPrice;
         }
@@ -195,26 +268,26 @@ contract BondingCurve {
             BondingCurveData.PriceData memory firstData = BondingCurveData.getData(0);
             console.log("[INFO] Supply is less than or equal to the first row's cumulativeSupply");
             console.log("Supply:", supply);
-            console.log("First Row Cumulative Supply:", BondingCurveData.getData(0).cumulativeSupply);
+            console.log("First Row Cumulative Supply:", firstData.cumulativeSupply);
             console.log("Returning First Row Sell Price:", firstData.sellPrice);
             return firstData.sellPrice;
         }
 
-        // 🔹 lowerIndex, upperIndex 탐색 (Sell 기준)
+        // 🔹 lowerIndex, upperIndex 탐색 (Sell 기준) → underflow 방지
         while (lowerIndex > 0 && supply < BondingCurveData.getData(lowerIndex).cumulativeSupply) {
             lowerIndex--;
-            upperIndex--;
+            if (upperIndex > 0) upperIndex--; // underflow 방지
         }
         while (upperIndex < lastIndex && supply > BondingCurveData.getData(upperIndex).cumulativeSupply) {
-            lowerIndex++;
+            if (lowerIndex < lastIndex) lowerIndex++; // overflow 방지
             upperIndex++;
         }
 
-        // ✅ lowerData, upperData 갱신
-        lowerData = BondingCurveData.getData(lowerIndex - 1);
-        upperData = BondingCurveData.getData(upperIndex - 1);
-        console.log("[DEBUG] Selected lowerIndex:", lowerIndex - 1);
-        console.log("[DEBUG] Selected upperIndex:", upperIndex - 1);
+        // ✅ lowerData, upperData 갱신 (수정된 인덱스 적용)
+        lowerData = BondingCurveData.getData(lowerIndex);
+        upperData = BondingCurveData.getData(upperIndex);
+        console.log("[DEBUG] Selected lowerIndex:", lowerIndex);
+        console.log("[DEBUG] Selected upperIndex:", upperIndex);
         lowerSupply = lowerData.cumulativeSupply;
         upperSupply = upperData.cumulativeSupply;
 
@@ -226,11 +299,10 @@ contract BondingCurve {
         // ✅ 예외 처리: upperSupply가 lowerSupply보다 커야 함
         require(upperSupply > lowerSupply, "Invalid supply range");
 
-        // 🔹 보간 계산
+        // 🔹 보간 계산 (upperData 기준으로 보간)
         uint256 ratio = (supply - lowerSupply) * 1e18 / (upperSupply - lowerSupply);
         uint256 adjustedRatio = ratio / 1e12;
 
-        // sellPrice = lowerData.sellPrice + ((upperData.sellPrice - lowerData.sellPrice) * adjustedRatio / 1e18);
         sellPrice = upperData.sellPrice - ((upperData.sellPrice - lowerData.sellPrice) * adjustedRatio / 1e18);
 
         console.log("SellPrice Calculation:");
@@ -238,9 +310,7 @@ contract BondingCurve {
         console.log("Upper Sell Price:", upperData.sellPrice);
         console.log("Ratio:", adjustedRatio);
         console.log("Computed Sell Price:", sellPrice);
-        // console.log("Computed Spread:", spread);
 
         return sellPrice;
-    }
-
+    }   
 }

@@ -40,15 +40,40 @@ contract TokenExchange {
         (uint256 buyPrice, uint256 spread) = bondingCurve.getBuyPrice();
         gastAmount = msg.value / buyPrice;
 
+        uint256 currentSupply = gasToken.totalSupply(); // 현재 총 공급량
+        uint256 maxSupply = 100000000; // 1억 GAST (0 decimals)
+
+        uint256 allowedGastAmount = gastAmount;
+        uint256 refundETH = 0;
+
+        // 🔍 최대 공급량을 초과하는 경우, 조정
+        if (currentSupply + gastAmount > maxSupply) {
+            allowedGastAmount = maxSupply - currentSupply; // 최대 발행 가능한 GAST 수량
+            refundETH = (gastAmount - allowedGastAmount) * buyPrice; // 초과분에 해당하는 ETH 반환
+            gastAmount = allowedGastAmount; // 발행량 업데이트
+        }
+
         gasToken.mint(msg.sender, gastAmount); 
         console.log("Minted GASToken Amount:", gastAmount);
 
-        // 단위 확인
-        uint256 reserveShare = (msg.value * spread) / 1e18;
-        uint256 treasuryShare = msg.value - reserveShare;
+        // 🔹 초과분 차감 후 분배할 ETH 계산
+        uint256 netEth = msg.value - refundETH;
+    
+        uint256 reserveShare = (netEth * spread) / 1e18;
+        uint256 treasuryShare = netEth - reserveShare;
+
+        // // 단위 확인
+        // uint256 reserveShare = (msg.value * spread) / 1e18;
+        // uint256 treasuryShare = msg.value - reserveShare;
 
         reserve.deposit{value: reserveShare}();
         treasury.deposit{value: treasuryShare}();
+
+            // 🔙 초과 ETH 반환
+        if (refundETH > 0) {
+            payable(msg.sender).transfer(refundETH);
+            console.log("Refunded Excess ETH:", refundETH);
+        }
 
         emit Buy(msg.sender, msg.value, gastAmount);
 
@@ -61,6 +86,15 @@ contract TokenExchange {
 
         uint256 sellPrice = bondingCurve.getSellPrice();
         ethAmount = gastAmount * sellPrice;
+
+            // 🛑 현재 리저브 잔액 확인
+        uint256 reserveBalance = address(reserve).balance;
+
+        // 🛑 만약 ethAmount가 리저브에 있는 ETH보다 크다면, 남은 ETH만 지급
+        if (ethAmount > reserveBalance) {
+            ethAmount = reserveBalance; // 리저브에 있는 만큼만 지급
+            console.log("Reserve ETH exceeded, adjusting withdrawal amount.");
+        }
 
         gasToken.burnFrom(msg.sender, gastAmount);
         console.log("Burn GASToken Amount:", gastAmount);
