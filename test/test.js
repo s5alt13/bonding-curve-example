@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Bonding Curve Test", function () {
     let gasToken, bondingCurve, exchange, treasury, reserve;
-    let inputETH = ethers.parseEther("1300");
+    let inputETH = ethers.parseEther("1200");
 
     beforeEach(async function () {
 
@@ -148,11 +148,15 @@ describe("Bonding Curve Test", function () {
         console.log(`🚀 Seller GAST Balance after transfer: ${sellerGastBalance.toString()}`);
 
             // 3️⃣ 1억 개 → 0개까지 `sell()`
-        const SELL_BATCH_SIZE = 500000; // 50만 개씩 판매
+        const SELL_BATCH_SIZE = 1500000; // 50만 개씩 판매
+
+        // TODO: 30만, 15만 등으로 조정하면 잘 안됨. Seller가 마지막에 없는 가스토큰을 보내려고 해서 문제 발생
+        // 예를 들어 10만개 남았고, 발행량도 10만개뿐인데, 30만개를 팔려고 해서 문제. 
 
         let totalWithdrawnETH = ethers.parseEther("0"); // 누적 출금 ETH 추적
 
         for (let i = 1; i <= 1000; i++) {
+
             const reserveInstance = await ethers.getContractAt("Reserve", reserve.target);
             const treasuryInstance = await ethers.getContractAt("Treasury", treasury.target);
 
@@ -160,12 +164,22 @@ describe("Bonding Curve Test", function () {
             await gasToken.connect(seller).approve(exchange.target, ethers.parseUnits("100000000", 0));
             console.log("✅ Seller approved 100M GAST for exchange contract");
 
-                // 남은 GAST가 50만 개보다 적으면 남은 수량만큼 판매
-            const sellAmount = sellerGastBalance < SELL_BATCH_SIZE ? sellerGastBalance : SELL_BATCH_SIZE;
+            // 남은 GAST가 50만 개보다 적으면 남은 수량만큼 판매
+            // TODO: 이 부분이 제대로 작동하지 않는 듯. 
+            // const sellAmount = sellerGastBalance < SELL_BATCH_SIZE ? sellerGastBalance : SELL_BATCH_SIZE;
+            const totalSupply = await gasToken.totalSupply(); // 현재 총 발행량 가져오기
+            const sellAmount = totalSupply < SELL_BATCH_SIZE ? totalSupply : SELL_BATCH_SIZE;
 
             const initialReserveBalance = await ethers.provider.getBalance(reserveInstance.target);
+            
+            console.log(`⚡ Before sell: Seller GAST Balance: ${sellerGastBalance}`);
+            console.log(`⚡ Before sell: Total GAST Supply: ${(await gasToken.totalSupply()).toString()}`);
 
             await exchange.connect(seller).sell(sellAmount);
+
+            console.log(`✅ After sell: Seller GAST Balance: ${(await gasToken.balanceOf(seller.address)).toString()}`);
+            console.log(`✅ After sell: Total GAST Supply: ${(await gasToken.totalSupply()).toString()}`);
+            // await exchange.connect(seller).sell(sellAmount);
             console.log(`🔹 Iteration ${i}: Selling GAST`);
 
             const finalReserveBalance = await ethers.provider.getBalance(reserveInstance.target);
