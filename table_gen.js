@@ -8,7 +8,7 @@ const OUTPUT_SOL_PATH = "BondingCurveData.sol";
 // CSV 데이터 읽기
 const csvData = fs.readFileSync(CSV_FILE_PATH, "utf-8").trim().split("\n");
 
-// 배열 크기 자동 설정
+// 배열 크기 자동 설정NN
 const arraySize = csvData.length - 2;
 
 // **배열 크기 제한 (Solidity 한도 고려)**

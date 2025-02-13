@@ -30,12 +30,15 @@ contract TokenExchange {
     }
 
     function buy() external payable returns (uint256 gastAmount) {
-        console.log("Contract: TokenExchange | Function: buy() | Sender:", msg.sender, "| Value:", msg.value);
+        // console.log("Contract: TokenExchange | Function: buy() | Sender:", msg.sender, "| Value:", msg.value);
         require(msg.value > 0, "TokenExchange: ETH amount must be greater than 0");
 
-        uint256 buyPrice = bondingCurve.getBuyPrice(); 
+        // uint256 buyPrice = bondingCurve.getBuyPrice(); 
+        // gastAmount = msg.value / buyPrice;
+        // uint256 spread = bondingCurve.getSpread();
+
+        (uint256 buyPrice, uint256 spread) = bondingCurve.getBuyPrice();
         gastAmount = msg.value / buyPrice;
-        uint256 spread = bondingCurve.getSpread();
 
         gasToken.mint(msg.sender, gastAmount); 
         console.log("Minted GASToken Amount:", gastAmount);
@@ -51,7 +54,7 @@ contract TokenExchange {
 
         return gastAmount;
     }
-
+    
     function sell(uint256 gastAmount) external returns(uint256 ethAmount) {
         console.log("Contract: TokenExchange | Function: sell() | Sender:", msg.sender);
         require(gastAmount > 0, "BondingCurveExchange: GAST amount must be greater than 0");
@@ -81,13 +84,13 @@ contract TokenExchange {
     //     return ethAmount;
     // }
     receive() external payable {
-        console.log("Contract: TokenExchange | Function: receive() | Sender:", msg.sender);
+        // console.log("Contract: TokenExchange | Function: receive() | Sender:", msg.sender);
         revert("BondingCurveExchange: Direct ETH transfers not allowed. Use buy() instead.");
     }
 
     // NOTE: 테스트용, 추후 삭제
     function updateTreasury(address _treasury) public {
-        console.log("Contract: TokenExchange | Function: updateTreasury() | Sender:", msg.sender);
+        // console.log("Contract: TokenExchange | Function: updateTreasury() | Sender:", msg.sender);
         require(_treasury != address(0), "TokenExchange: invalid treasury address");
         treasury = Treasury(_treasury);
     }

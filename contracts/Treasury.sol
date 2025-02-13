@@ -45,7 +45,7 @@ contract Treasury is Ownable {
     }
     
     function deposit() external payable {
-        console.log("Contract: Treasury | Function: deposit() | Sender:", msg.sender, "| Value:", msg.value);
+        // console.log("Contract: Treasury | Function: deposit() | Sender:", msg.sender, "| Value:", msg.value);
         require(msg.value > 0, "Treasury: ETH amount must be greater than zero");
         treasuryETHBalance += msg.value; // Update Treasury ETH balance
 
@@ -65,6 +65,7 @@ contract Treasury is Ownable {
 
         emit Withdraw(to, amount);
     }
+    
     // NOTE: onlyRebalancer
     function rebalance() external {
         console.log("Contract: Treasury | Function: rebalance() | Sender:", msg.sender);

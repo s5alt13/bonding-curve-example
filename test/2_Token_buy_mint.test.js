@@ -3,9 +3,10 @@ const { ethers } = require("hardhat");
 
 describe("Bonding Curve Test", function () {
     let gasToken, bondingCurve, exchange, treasury, reserve;
-    let initialETH = ethers.parseEther("100");
+    let inputETH = ethers.parseEther("1300");
 
     beforeEach(async function () {
+
         // 배포 순서 
         // 1. Reserve 
         // 2. GASToken
@@ -14,7 +15,12 @@ describe("Bonding Curve Test", function () {
         // 5. Treasury <- Exchange address 필요 
         // 6. Exchange.updateTreasury
 
-        [owner, buyer] = await ethers.getSigners();
+        const signers = await ethers.getSigners();
+        owner = signers[0];
+        buyer = signers[1]; 
+        // console.log("🔍 Assigned Buyer Address:", buyer?.address);
+        const balance = await ethers.provider.getBalance(buyer.address);
+        // console.log("🔍 Buyer Initial ETH Balance:", ethers.formatEther(balance), "ETH")
 
         const ReserveMock = await ethers.getContractFactory("Reserve");
         reserve = await ReserveMock.deploy();
@@ -71,6 +77,31 @@ describe("Bonding Curve Test", function () {
     
         expect(await bondingCurve.gasToken()).to.equal(await gasToken.getAddress());
     
-        console.log("\n✅ All contract addresses verified successfully!");
+        // console.log("\n✅ All contract addresses verified successfully!");
     });
+
+    // Test : 토큰 발행 1억개까지 ETH로 구매(exchange.buy)하면서 totalSupply 확인
+    it("Should correctly interpolate price after multiple buys", async function () {
+
+        const balance = await ethers.provider.getBalance(buyer.address);
+        console.log("🔍 Buyer ETH Balance:", ethers.formatEther(balance), "ETH");
+        
+        const MAX_SUPPLY = 100000000; // 1억 GAST (0 decimals)
+
+
+        for (let i = 1; i <= 500; i++) {
+
+            await exchange.connect(buyer).buy({ value: inputETH });
+            console.log(`🔹 Iteration ${i}: Buying 1300 ETH worth of GAST`);
+
+            const supply = await gasToken.totalSupply();
+
+            console.log(`🔍 Current total supply after ${i} buys:`, supply.toString());
+            // 1억 개 이상이면 종료
+            if (supply >= MAX_SUPPLY) {
+                console.log("🎯 Supply reached 100 million, stopping loop.");
+                break;
+            }
+        }
+    })
 });
