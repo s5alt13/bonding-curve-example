@@ -7,6 +7,7 @@ import "./TokenExchange.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
+
 contract Treasury is Ownable {
     Reserve public reserve;
     GASToken public gasToken;
@@ -17,6 +18,8 @@ contract Treasury is Ownable {
     uint256 public reserveETHBalance;
 
     address public rebalancer;
+
+    bool public debugMode = false;
 
     // modifier onlyRebalancer() {
     //     require(msg.sender == rebalancer, "Caller is not the Rebalancer");
@@ -45,7 +48,10 @@ contract Treasury is Ownable {
     }
     
     function deposit() external payable {
-        // console.log("Contract: Treasury | Function: deposit() | Sender:", msg.sender, "| Value:", msg.value);
+        if (debugMode) { 
+            console.log("Contract: Treasury | Function: deposit() | Sender:", msg.sender, "| Value:", msg.value);
+        }   
+        
         require(msg.value > 0, "Treasury: ETH amount must be greater than zero");
         treasuryETHBalance += msg.value; // Update Treasury ETH balance
 
@@ -54,7 +60,9 @@ contract Treasury is Ownable {
 
     // NOTE: 
     function withdraw(address to, uint256 amount) external {
-        console.log("Contract: Treasury | Function: withdraw() | Sender:", msg.sender);
+        if (debugMode) { 
+            console.log("Contract: Treasury | Function: withdraw() | Sender:", msg.sender);
+        }   
 
         require(to != address(0), "Invalid recipient address");
         require(amount <= treasuryETHBalance, "Insufficient Treasury balance");
@@ -68,7 +76,9 @@ contract Treasury is Ownable {
     
     // NOTE: onlyRebalancer
     function rebalance() external {
-        console.log("Contract: Treasury | Function: rebalance() | Sender:", msg.sender);
+        if (debugMode) { 
+            console.log("Contract: Treasury | Function: rebalance() | Sender:", msg.sender);
+        }   
 
         require(address(exchange) != address(0), "Exchange not set");
 
@@ -84,26 +94,31 @@ contract Treasury is Ownable {
         emit Rebalance(treasuryETHBalance);
     }
 
-    // function rebalance() external onlyRebalancer {}
-
     function getBalance() external view returns (uint256 balance) {
-        console.log("Contract: Treasury | Function: getBalance() | Sender:", msg.sender);
+        if (debugMode) { 
+            console.log("Contract: Treasury | Function: getBalance() | Sender:", msg.sender);
+        } 
 
         return treasuryETHBalance; // Return balance
     }
 
-    // function updateReserveRatio(uint256 newRatio) external onlyOwner {
-    //     require(newRatio <= 100, "Reserve ratio must be <= 100");
-    //     reserveRatio = newRatio;
-    // }
-
     // NOTE: 테스트용
     function updateExchange(address _exchange) external {
-        console.log("Contract: Treasury | Function: updateExchange() | Sender:", msg.sender);
+        if (debugMode) { 
+            console.log("Contract: Treasury | Function: updateExchange() | Sender:", msg.sender);
+        }    
 
         require(_exchange != address(0), "Invalid Exchange address");
         exchange = TokenExchange(payable(_exchange));
     }
 
     // function receive() {}
+
+    // function rebalance() external onlyRebalancer {}
+
+    // function updateReserveRatio(uint256 newRatio) external onlyOwner {
+    //     require(newRatio <= 100, "Reserve ratio must be <= 100");
+    //     reserveRatio = newRatio;
+    // }
 }
+

@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+
 contract GASToken is ERC20, Ownable {
     uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 18; // 100 million tokens
 
@@ -38,4 +39,5 @@ contract GASToken is ERC20, Ownable {
         _approve(account, msg.sender, currentAllowance - amount); // Reduce allowance
         _burn(account, amount); // Use ERC20's internal _burn function
     }
+
 }

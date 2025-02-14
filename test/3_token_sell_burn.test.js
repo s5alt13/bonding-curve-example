@@ -106,12 +106,13 @@ async function mintToMaxSupply(buyer, exchange, gasToken, reserve, treasury) {
         const reserveBalance = await ethers.provider.getBalance(reserve.target);
         const treasuryBalance = await ethers.provider.getBalance(treasury.target);
         
-        
         console.log(`🔹 Iteration ${i}: Bought GAST`);
         console.log(`🔍 Total Supply: ${supply.toString()}`);
         console.log(`🏦 Reserve ETH: ${ethers.formatEther(reserveBalance)} ETH`);
         console.log(`💰 Treasury ETH: ${ethers.formatEther(treasuryBalance)} ETH`);
         console.log(`👤 Buyer GAST Balance: ${buyerBalanceBefore.toString()} → ${buyerBalanceAfter.toString()}`);
+        console.log(`                                          `);
+
         if (supply >= MAX_SUPPLY) {
             console.log("🎯 ---------------------------------------------");
             console.log("🎯 | Supply reached 100 million, stopping loop. |");
@@ -157,7 +158,7 @@ async function sellToZeroSupply(seller, exchange, gasToken, reserve, treasury) {
         const finalReserveBalance = await ethers.provider.getBalance(reserveInstance.target);
         const withdrawnETH = initialReserveBalance - finalReserveBalance;
         totalWithdrawnETH += withdrawnETH;
-
+        
         console.log(`🔹 Iteration ${i}: Sold ${sellAmount} GAST`);
         console.log(`🔍 Current total supply: ${await gasToken.totalSupply()}`);
         console.log(`🏦 Reserve ETH Balance: ${ethers.formatEther(finalReserveBalance)} ETH`);
@@ -165,6 +166,7 @@ async function sellToZeroSupply(seller, exchange, gasToken, reserve, treasury) {
         console.log(`💸 Withdrawn ETH in this iteration: ${ethers.formatEther(withdrawnETH)} ETH`);
         console.log(`👤 Seller GAST Balance: ${sellerGastBalance.toString()} → ${(await gasToken.balanceOf(seller.address)).toString()}`);
         console.log(`💰 Total Withdrawn ETH so far: ${ethers.formatEther(totalWithdrawnETH)} ETH`);
+        console.log(`                                          `);
 
         // 전체 공급량이 0이 되면 종료
         if (await gasToken.totalSupply() <= 0) {
