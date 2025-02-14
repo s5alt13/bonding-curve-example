@@ -61,8 +61,11 @@ contract TokenExchange {
 
         uint256 netEth = msg.value - refundETH;
     
-        uint256 reserveShare = (netEth * spread) / 1e18;
-        uint256 treasuryShare = netEth - reserveShare;
+        // uint256 reserveShare = (netEth * spread) / 1e18;
+        // uint256 treasuryShare = netEth - reserveShare;
+
+        uint256 treasuryShare = (netEth * spread) / 1e18;
+        uint256 reserveShare = netEth - treasuryShare; 
 
         reserve.deposit{value: reserveShare}();
         treasury.deposit{value: treasuryShare}();

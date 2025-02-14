@@ -50,10 +50,18 @@ describe("Bonding Curve Test", function () {
         treasury = await TreasuryMock.deploy(
             reserve.getAddress(),
             gasToken.getAddress(),
-            exchange.getAddress()
+            exchange.getAddress(),
+            ethers.ZeroAddress // 리밸런서 주소는 이후 업데이트됨
         );
         await treasury.waitForDeployment();
 
+        // 리밸런서 배포 추가
+        const RebalancerMock = await ethers.getContractFactory("Rebalancer");
+        rebalancer = await RebalancerMock.deploy(treasury.getAddress());
+        await rebalancer.waitForDeployment();
+
+        // 트레저리에 리밸런서 업데이트
+        await treasury.setRebalancer(rebalancer.getAddress());
         await exchange.updateTreasury(treasury.getAddress());
         await gasToken.setExchange(exchange.getAddress());
     });
@@ -62,6 +70,7 @@ describe("Bonding Curve Test", function () {
         expect(await treasury.reserve()).to.equal(await reserve.getAddress());
         expect(await treasury.gasToken()).to.equal(await gasToken.getAddress());
         expect(await treasury.exchange()).to.equal(await exchange.getAddress());
+        expect(await treasury.rebalancer()).to.equal(await rebalancer.getAddress()); // ✅ 리밸런서 검증 추가
 
         expect(await exchange.reserve()).to.equal(await reserve.getAddress());
         expect(await exchange.gasToken()).to.equal(await gasToken.getAddress());

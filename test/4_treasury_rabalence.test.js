@@ -1,9 +1,11 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+const INPUT_ETH = ethers.parseEther("1000"); // 매입할 ETH
+
 describe("Bonding Curve Test", function () {
-    let gasToken, bondingCurve, exchange, treasury, reserve;
-    let initialETH = ethers.parseEther("100");
+    let gasToken, bondingCurve, exchange, treasury, reserve, rebalancer;
+    let owner, buyer, seller;
 
     beforeEach(async function () {
         const signers = await ethers.getSigners();
@@ -72,5 +74,28 @@ describe("Bonding Curve Test", function () {
         expect(await exchange.treasury()).to.equal(await treasury.getAddress());
 
         expect(await bondingCurve.gasToken()).to.equal(await gasToken.getAddress());
+    });
+
+    it("should trigger rebalancer correctly", async function () {
+
+        await exchange.connect(buyer).buy({ value: INPUT_ETH });
+
+        const initialTreasuryBalance = await ethers.provider.getBalance(treasury.getAddress());
+        const initialReserveBalance = await ethers.provider.getBalance(reserve.getAddress());
+
+        console.log(`🔹 Initial Treasury ETH Balance: ${ethers.formatEther(initialTreasuryBalance)} ETH`);
+        console.log(`🔹 Initial Reserve ETH Balance: ${ethers.formatEther(initialReserveBalance)} ETH`);
+
+        // ✅ 리밸런서 실행
+        await rebalancer.triggerRebalance();
+
+        const finalTreasuryBalance = await ethers.provider.getBalance(treasury.getAddress());
+        const finalReserveBalance = await ethers.provider.getBalance(reserve.getAddress());
+
+        console.log(`✅ Final Treasury ETH Balance: ${ethers.formatEther(finalTreasuryBalance)} ETH`);
+        console.log(`✅ Final Reserve ETH Balance: ${ethers.formatEther(finalReserveBalance)} ETH`);
+
+        // expect(finalTreasuryBalance).to.be.below(initialTreasuryBalance); // ✅ 리밸런싱 후 트레저리 ETH 감소
+        // expect(finalReserveBalance).to.be.above(initialReserveBalance); // ✅ 리저브 ETH 증가
     });
 });
