@@ -2,6 +2,8 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 const INPUT_ETH = ethers.parseEther("1000"); // 매입할 ETH
+const MAX_SUPPLY = 70000000; // 최대 공급량 1억 개
+const BUY_ITERATIONS = 500; // 구매 반복 횟수
 
 describe("Bonding Curve Test", function () {
     let gasToken, bondingCurve, exchange, treasury, reserve, rebalancer;
@@ -95,7 +97,59 @@ describe("Bonding Curve Test", function () {
         console.log(`✅ Final Treasury ETH Balance: ${ethers.formatEther(finalTreasuryBalance)} ETH`);
         console.log(`✅ Final Reserve ETH Balance: ${ethers.formatEther(finalReserveBalance)} ETH`);
 
-        // expect(finalTreasuryBalance).to.be.below(initialTreasuryBalance); // ✅ 리밸런싱 후 트레저리 ETH 감소
-        // expect(finalReserveBalance).to.be.above(initialReserveBalance); // ✅ 리저브 ETH 증가
+    });
+    
+    // 스프레드가 0.5 이후에 테스트 하기 위함
+    it("should trigger rebalancer correctly after minting 70M GAST", async function () {
+        // ✅ 7천만 개까지 GAST 발행
+        const finalSupply = await mintToMaxSupply(buyer, exchange, gasToken, reserve, treasury);
+        // expect(finalSupply).to.equal(MAX_SUPPLY);
+    
+        // ✅ 리밸런싱 실행 전 잔액 확인
+        const initialTreasuryBalance = await ethers.provider.getBalance(treasury.getAddress());
+        const initialReserveBalance = await ethers.provider.getBalance(reserve.getAddress());
+    
+        console.log(`🔹 Initial Treasury ETH Balance: ${ethers.formatEther(initialTreasuryBalance)} ETH`);
+        console.log(`🔹 Initial Reserve ETH Balance: ${ethers.formatEther(initialReserveBalance)} ETH`);
+    
+        // ✅ 리밸런서 실행
+        await rebalancer.triggerRebalance();
+    
+        // ✅ 리밸런싱 실행 후 잔액 확인
+        const finalTreasuryBalance = await ethers.provider.getBalance(treasury.getAddress());
+        const finalReserveBalance = await ethers.provider.getBalance(reserve.getAddress());
+    
+        console.log(`✅ Final Treasury ETH Balance: ${ethers.formatEther(finalTreasuryBalance)} ETH`);
+        console.log(`✅ Final Reserve ETH Balance: ${ethers.formatEther(finalReserveBalance)} ETH`);
     });
 });
+
+async function mintToMaxSupply(buyer, exchange, gasToken, reserve, treasury) {
+    console.log("🚀 Starting minting process to reach 100M GAST...");
+
+    for (let i = 1; i <= BUY_ITERATIONS; i++) {
+        const buyerBalanceBefore = await gasToken.balanceOf(buyer.address); // 구매 전 잔액
+        await exchange.connect(buyer).buy({ value: INPUT_ETH });
+        const buyerBalanceAfter = await gasToken.balanceOf(buyer.address); // 구매 후 잔액
+
+        const supply = await gasToken.totalSupply();
+        const reserveBalance = await ethers.provider.getBalance(reserve.target);
+        const treasuryBalance = await ethers.provider.getBalance(treasury.target);
+        
+        console.log(`🔹 Iteration ${i}: Bought GAST`);
+        console.log(`🔍 Total Supply: ${supply.toString()}`);
+        console.log(`🏦 Reserve ETH: ${ethers.formatEther(reserveBalance)} ETH`);
+        console.log(`💰 Treasury ETH: ${ethers.formatEther(treasuryBalance)} ETH`);
+        console.log(`👤 Buyer GAST Balance: ${buyerBalanceBefore.toString()} → ${buyerBalanceAfter.toString()}`);
+        console.log(`                                          `);
+
+        if (supply >= MAX_SUPPLY) {
+            console.log("🎯 ---------------------------------------------");
+            console.log("🎯 | Supply reached 70 million, stopping loop. |");
+            console.log("🎯 ---------------------------------------------");
+            break;
+        }
+    }
+
+    return await gasToken.totalSupply(); // 최종 공급량 반환
+}

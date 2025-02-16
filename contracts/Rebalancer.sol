@@ -12,6 +12,8 @@ contract Rebalancer is Ownable {
     uint256 public rebalance_range = 5; 
     uint256 public maxSpendRatio= 20; 
 
+    bool public debugMode = false;
+
     event RebalanceTriggered(uint256 currentRTR, uint256 ethSpent, uint256 gastReceived);
 
     constructor(address _treasury) Ownable(msg.sender) {
@@ -30,15 +32,17 @@ contract Rebalancer is Ownable {
     }
 
     function triggerRebalance() external {
+        if (debugMode) { 
+            console.log("Contract: Rebalancer | Function: triggerRebalance()");
+        }  
         uint256 reserveETH = address(treasury.reserve()).balance;
         uint256 treasuryETH = treasury.getBalance();
         uint256 currentRTR = (treasuryETH * 100) / reserveETH; 
 
         console.log("Checking RTR:", currentRTR, "%");
 
-        // TODO: 상방, 하방 모두 조건이 있어야 할 듯
-        if (currentRTR <= targetRTR) {
-            console.log("No rebalance needed, RTR is above target.");
+        if (currentRTR >= targetRTR - rebalance_range && currentRTR <= targetRTR + rebalance_range) {
+            console.log("No rebalance needed. Current RTR is within range.");
             return;
         }
 
